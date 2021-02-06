@@ -17,8 +17,9 @@ const Status = {
   CRAWLED: 'CRAWLED',
   ERRORED: 'ERRORED',
 };
+let numCrawled = 0;
 
-const HOST = 'https://docdiggers-hackaton2020.netlify.app/';
+const HOST = 'https://docdiggers-hackaton2020.netlify.app';
 
 const getStatus = (url) => {
   if (pageMap[url] === undefined) {
@@ -29,26 +30,49 @@ const getStatus = (url) => {
 
 const isErrored = (url) => (pageMap[url] ? pageMap[url].status === Status.ERRORED : false);
 
-const isCrawled = (url) => getStatus(url) === Status.CRAWLED;
+const isCrawled = (url) => {
+  return getStatus(url) === Status.CRAWLED;
+};
 
-const shouldCrawl = (url) =>
-  url && (url.startsWith(HOST) || url.startsWith('/')) && !isErrored(url) && !isCrawled(url);
+const getAbsUrl = (url) => {
+  const cleanUrl = url.replace(/[#?].+/, '');
+  if (cleanUrl.startsWith(HOST)) {
+    return cleanUrl;
+  }
+  return `${HOST}${cleanUrl}`;
+};
 
-const getAbsUrl = (url) => (url.startsWith(HOST) ? url : `${HOST}${url.replace(/^\//, '')}`);
+const shouldCrawl = (url) => {
+  if (!url) {
+    return false;
+  }
+  if (!url.startsWith(HOST) && !url.startsWith('/')) {
+    return false;
+  }
+  if (url === '/') {
+    return false;
+  }
+  const fullUrl = getAbsUrl(url);
+  return !isErrored(fullUrl) && !isCrawled(fullUrl);
+};
 
 const crawl = async (url, foundOn) => {
   const pageUrl = getAbsUrl(url);
-  console.log(`crawling: ${pageUrl}`);
+  numCrawled += 1;
+  console.log(`crawling page ${numCrawled}: ${pageUrl}`);
   try {
     const { data: html } = await axios.get(pageUrl, { responseType: 'text' });
     const $ = cheerio.load(html);
     const anchors = $('a');
     const hrefs = [];
     anchors.each((i, elem) => {
-      hrefs.push(elem.attribs.href);
+      const { href } = elem.attribs;
+      if (href) {
+        hrefs.push(href);
+      }
     });
     pageMap[pageUrl] = {
-      status: getStatus(pageUrl),
+      status: Status.CRAWLED,
       links: hrefs,
     };
     const knownErrored = hrefs.filter(isErrored);
@@ -61,7 +85,7 @@ const crawl = async (url, foundOn) => {
     }
 
     for (const href of toCrawl) {
-      await crawl(href, pageUrl);
+      await crawl(href.replace(HOST, ''), pageUrl);
     }
   } catch (err) {
     if (err.response.status === 404) {
@@ -79,7 +103,7 @@ const crawl = async (url, foundOn) => {
 
 const run = async () => {
   try {
-    await crawl(HOST);
+    await crawl(`${HOST}/`);
     fs.writeFileSync(outPath, JSON.stringify(pageMap, null, 2), 'utf8');
     process.exit(0);
   } catch (err) {
