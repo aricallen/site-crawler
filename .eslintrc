@@ -1,0 +1,35 @@
+{
+  "extends": ["airbnb-base", "prettier"],
+  "plugins": ["prettier"],
+  "env": {
+    "browser": true,
+    "node": true,
+    "es6": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-console": 0,
+    "no-bitwise": "off",
+    "global-require": "off",
+    "prettier/prettier": [
+      "error",
+      {
+        "tabWidth": 2,
+        "printWidth": 100,
+        "singleQuote": true,
+        "trailingComma": "es5",
+        "arrowParens": "always"
+      }
+    ],
+    "import/extensions": 0,
+    "no-underscore-dangle": 0,
+    "class-methods-use-this": "off",
+    "arrow-body-style": "off",
+    "no-param-reassign": ["error", { "props": false }],
+    "no-await-in-loop": "off",
+    "no-restricted-syntax": "off"
+  }
+}
