@@ -4,6 +4,12 @@ const fs = require('fs');
 const path = require('path');
 
 const outPath = path.resolve('data', 'results.json');
+const initPageMap = () => {
+  if (fs.existsSync(outPath)) {
+    return JSON.parse(fs.readFileSync(outPath, 'utf8'));
+  }
+  return {};
+};
 
 /**
  * [key: pageUrl]: {
@@ -11,7 +17,7 @@ const outPath = path.resolve('data', 'results.json');
  *   links: string[];
  * }
  */
-const pageMap = {};
+const pageMap = initPageMap();
 const Status = {
   UNCRAWLED: 'UNCRAWLED',
   CRAWLED: 'CRAWLED',
@@ -56,6 +62,17 @@ const shouldCrawl = (url) => {
   return !isErrored(fullUrl) && !isCrawled(fullUrl);
 };
 
+const updateOutput = () => {
+  if (fs.existsSync(outPath) === false) {
+    fs.writeFileSync(outPath, '{}', 'utf8');
+  }
+  if (numCrawled % 100 === 0) {
+    const existing = JSON.parse(fs.readFileSync(outPath, 'utf8'));
+    const newOutput = { ...existing, ...pageMap };
+    fs.writeFileSync(outPath, JSON.stringify(newOutput, null, 2), 'utf8');
+  }
+};
+
 const crawl = async (url, foundOn) => {
   const pageUrl = getAbsUrl(url);
   numCrawled += 1;
@@ -73,9 +90,9 @@ const crawl = async (url, foundOn) => {
     });
     pageMap[pageUrl] = {
       status: Status.CRAWLED,
-      links: hrefs,
     };
-    const knownErrored = hrefs.filter(isErrored);
+    updateOutput();
+    const knownErrored = hrefs.map(getAbsUrl).filter(isErrored);
     knownErrored.forEach((erroredHref) => {
       pageMap[erroredHref].foundOn.push(foundOn);
     });
@@ -85,7 +102,7 @@ const crawl = async (url, foundOn) => {
     }
 
     for (const href of toCrawl) {
-      await crawl(href.replace(HOST, ''), pageUrl);
+      await crawl(href.replace(HOST, ''), getAbsUrl(pageUrl));
     }
   } catch (err) {
     if (err.response.status === 404) {
