@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node --max-old-space-size=9216 index.js"
   },
   "devDependencies": {
     "eslint": "^7.19.0",
